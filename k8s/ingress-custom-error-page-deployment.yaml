@@ -17,5 +17,5 @@ spec:
         ports:
         - protocol: TCP
           containerPort: 8080
-        imagePullSecrets:
-          - name: regcred
+      imagePullSecrets:
+        - name: regcred
