@@ -1,0 +1,96 @@
+version: 2
+defaults:
+  environment:
+
+jobs:
+  build_test:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    steps:
+      - checkout
+
+      # run test
+      - run:
+          name : Go Test the Project
+          command :
+
+  build_project:
+    docker:
+      - image: circleci/golang
+    steps:
+      - checkout
+
+      # run build
+      - run:
+          name : Go Build the Project
+          command : |
+            go build -a -installsuffix cgo -ldflags "-s -w" -o custom-error-pages
+            mkdir deploy
+            cp ./custom-error-pages ./deploy
+            cp ./Dockerfile ./deploy
+            mv ./rootfs ./deploy
+
+      - persist_to_workspace:
+          root: /home/circleci/project
+          paths:
+            - deploy
+
+  build_docker:
+    machine: true
+    steps:
+      - attach_workspace:
+          at: /home/circleci/project
+
+      - run:
+          name: Docker Build & Deploy
+          command: |
+            docker login https://docker.pkg.github.com -u $GITHUB_PACKAGE_USERNAME -p $GITHUB_PACKAGE_PASSWORD
+            STABLE_TAG="1.0"
+            TAG="${STABLE_TAG}.${CIRCLE_BUILD_NUM}"
+            TAGGED_IMAGE="docker.pkg.github.com/misoboy/k8s-ingress-custom-error-page/ingress-custom-error-page"
+            IMAGE="${TAGGED_IMAGE}:${TAG}"
+            echo "image: $IMAGE"
+            docker build -t "$IMAGE" ./deploy/
+            docker push "${IMAGE}"
+
+  deploy_argocd:
+    machine: true
+    steps:
+      - run:
+          name: ArgoCD Deploy
+          command: |
+            STABLE_TAG="1.0"
+            TAG="${STABLE_TAG}.${CIRCLE_PREVIOUS_BUILD_NUM}"
+            git clone -b argocd https://github.com/misoboy/k8s-ingress-custom-error-page.git /tmp/ingress-custom-error-page
+            cd /tmp/ingress-custom-error-page
+            sed -i -E 's/(k8s-ingress-custom-error-page\:)(([0-9])|(\.)){1,}/ingress-custom-error-page:'$TAG'/' ./k8s/ingress-custom-error-page-deployment.yaml
+            git add .
+            git config credential.helper 'cache --timeout=120'
+            git config user.email "misoboy.kor@gmail.com"
+            git config user.name "misoboy"
+            git commit -m "Update via CircleCI"
+            git push -q https://$GITHUB_PACKAGE_PASSWORD@github.com/misoboy/k8s-ingress-custom-error-page.git argocd
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - build_test:
+          filters:
+            branches:
+              only: master
+      - build_docker:
+          context: GITHUB_SECRET
+          requires:
+            - build_test
+          filters:
+            branches:
+              only: master
+      - deploy_argocd:
+          context: GITHUB_SECRET
+          requires:
+            - build_docker
+          filters:
+            branches:
+              only: master
+
