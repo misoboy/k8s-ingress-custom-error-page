@@ -13,6 +13,7 @@ jobs:
       - run:
           name : Go Build the Project
           command : |
+            go get -t github.com/prometheus/client_golang/prometheus
             go build -a -installsuffix cgo -ldflags "-s -w" -o custom-error-pages
             mkdir deploy
             cp ./custom-error-pages ./deploy
