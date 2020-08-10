@@ -76,13 +76,21 @@ workflows:
   workflow:
     jobs:
       - build_test:
+          context: GITHUB_SECRET
+          filters:
+            branches:
+              only: master
+      - build_project:
+          context: GITHUB_SECRET
+          requires:
+            - build_test
           filters:
             branches:
               only: master
       - build_docker:
           context: GITHUB_SECRET
           requires:
-            - build_test
+            - build_project
           filters:
             branches:
               only: master
