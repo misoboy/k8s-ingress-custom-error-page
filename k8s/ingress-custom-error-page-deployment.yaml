@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: app-custom-error-page-deploy
-  namespace: ingress-nginx
+  #namespace: ingress-nginx
 spec:
   replicas: 1
   revisionHistoryLimit: 1
