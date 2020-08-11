@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: app-custom-error-page-deploy
 spec:
+  replicas: 1
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       misoboy-service: app-custom-error-page
