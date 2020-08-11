@@ -8,7 +8,6 @@ jobs:
     docker:
       - image: golang:alpine
     steps:
-      - checkout
 
       # run build
       - run:
@@ -19,7 +18,9 @@ jobs:
             apk add --no-cache bash git openssh
             apk add build-base
             CGO_ENABLED=0
+            git clone https://github.com/misoboy/k8s-ingress-custom-error-page.git ./k8s-ingress-custom-error-page
             go get -t github.com/prometheus/client_golang/prometheus
+            cd k8s-ingress-custom-error-page
             go build -a -installsuffix cgo -ldflags "-s -w" -o custom-error-pages
             pwd
             ls -al
@@ -29,7 +30,7 @@ jobs:
             mv ./rootfs ./deploy
 
       - persist_to_workspace:
-          root: /root
+          root: /root/k8s-ingress-custom-error-page
           paths:
             - deploy
 
@@ -38,12 +39,14 @@ jobs:
     machine: true
     steps:
       - attach_workspace:
-          at: /root
+          at: /root/k8s-ingress-custom-error-page
 
       - run:
           name: Docker Build & Deploy
           command: |
             pwd
+            ls -al
+            cd k8s-ingress-custom-error-page
             ls -al
             docker login https://docker.pkg.github.com -u $GITHUB_PACKAGE_USERNAME -p $GITHUB_PACKAGE_PASSWORD
             STABLE_TAG="1.0"
