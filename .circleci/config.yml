@@ -4,23 +4,17 @@ defaults:
 
 jobs:
   build_project:
-    working_directory: /root
     docker:
-      - image: golang:alpine
+      - image: circleci/golang:latest
     steps:
+      - checkout
 
       # run build
       - run:
           name : Go Build the Project
           command : |
-            apk update
-            apk upgrade
-            apk add --no-cache bash git openssh
-            apk add build-base
             CGO_ENABLED=0
-            git clone https://github.com/misoboy/k8s-ingress-custom-error-page.git ./k8s-ingress-custom-error-page
             go get -t github.com/prometheus/client_golang/prometheus
-            cd k8s-ingress-custom-error-page
             go build -a -installsuffix cgo -ldflags "-s -w" -o custom-error-pages
             pwd
             ls -al
@@ -30,16 +24,15 @@ jobs:
             mv ./rootfs ./deploy
 
       - persist_to_workspace:
-          root: /root/k8s-ingress-custom-error-page
+          root: /home/circleci/project
           paths:
             - deploy
 
   build_docker:
-    working_directory: /root
     machine: true
     steps:
       - attach_workspace:
-          at: /root/k8s-ingress-custom-error-page
+          at: /home/circleci/project
 
       - run:
           name: Docker Build & Deploy
