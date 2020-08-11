@@ -4,7 +4,7 @@ defaults:
 
 jobs:
   build_project:
-    working_directory: /go/src
+    working_directory: /root
     docker:
       - image: golang:alpine
     steps:
@@ -21,26 +21,30 @@ jobs:
             CGO_ENABLED=0
             go get -t github.com/prometheus/client_golang/prometheus
             go build -a -installsuffix cgo -ldflags "-s -w" -o custom-error-pages
+            pwd
+            ls -al
             mkdir deploy
             cp ./custom-error-pages ./deploy
             cp ./Dockerfile ./deploy
             mv ./rootfs ./deploy
 
       - persist_to_workspace:
-          root: /go/src
+          root: /root
           paths:
             - deploy
 
   build_docker:
+    working_directory: /root
     machine: true
     steps:
       - attach_workspace:
-          at: /go/src
+          at: /root
 
       - run:
           name: Docker Build & Deploy
           command: |
-            cd /go/src
+            pwd
+            ls -al
             docker login https://docker.pkg.github.com -u $GITHUB_PACKAGE_USERNAME -p $GITHUB_PACKAGE_PASSWORD
             STABLE_TAG="1.0"
             TAG="${STABLE_TAG}.${CIRCLE_BUILD_NUM}"
