@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: app-custom-error-page-service
+  namespace: ingress-nginx
 spec:
   selector:
     misoboy-service: app-custom-error-page
