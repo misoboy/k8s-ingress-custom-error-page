@@ -27,7 +27,6 @@ env:
 install: true
 
 before_install:
-  - chmod +x mvnw
   # Load cached docker images
   - if [[ -d $HOME/docker ]]; then ls $HOME/docker/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
 
