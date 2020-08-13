@@ -10,9 +10,6 @@ branched:
   only:
     - master
 
-cache:
-  directories:
-
 env:
   global:
     - STABLE_TAG: 2.0
