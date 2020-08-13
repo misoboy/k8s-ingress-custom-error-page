@@ -1,0 +1,71 @@
+language: go
+sudo: true
+go:
+  - 1.x
+
+services:
+  - docker
+
+branched:
+  only:
+    - master
+
+before_cache:
+  # Save tagged docker images
+  - >
+    mkdir -p $HOME/docker && docker images -a --filter='dangling=false' --format '{{.Repository}}:{{.Tag}} {{.ID}}'
+    | xargs -n 2 -t sh -c 'test -e $HOME/docker/$1.tar.gz || docker save $0 | gzip -2 > $HOME/docker/$1.tar.gz'
+
+cache:
+  directories:
+    - '$HOME/docker'
+
+env:
+  global:
+    - STABLE_TAG: 2.0
+
+install: true
+
+before_install:
+  - chmod +x mvnw
+  # Load cached docker images
+  - if [[ -d $HOME/docker ]]; then ls $HOME/docker/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
+
+jobs:
+  include:
+    - stage: Go Test the Project
+      script:
+
+    - stage: Docker Build & Deploy
+      script:
+        - CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+        - go get -t github.com/prometheus/client_golang/prometheus
+        - go build -tags netgo -a -v -o custom-error-pages
+        - mkdir deploy
+        - cp ./custom-error-pages ./deploy
+        - cp ./Dockerfile ./deploy
+        - mv ./rootfs ./deploy
+        - docker login https://docker.pkg.github.com -u $GITHUB_PACKAGE_USERNAME -p $GITHUB_PACKAGE_PASSWORD
+        - TAG="${STABLE_TAG}.${TRAVIS_BUILD_NUMBER}"
+        - TAGGED_IMAGE="docker.pkg.github.com/misoboy/k8s-ingress-custom-error-page/ingress-custom-error-page"
+        - IMAGE="${TAGGED_IMAGE}:${TAG}"
+        - echo 'image:' $IMAGE
+        - docker build -t "$IMAGE" ./deploy/
+        - docker push "${IMAGE}"
+
+    - stage: ArgoCD Deploy
+      script:
+        - TAG="${STABLE_TAG}.${TRAVIS_BUILD_NUMBER}"
+        - git clone -b argocd https://github.com/misoboy/k8s-ingress-custom-error-page.git /tmp/ingress-custom-error-page
+        - cd /tmp/ingress-custom-error-page
+        - sed -i -E 's/(ingress-custom-error-page\:)(([0-9])|(\.)){1,}/ingress-custom-error-page:'$TAG'/' ./k8s/ingress-custom-error-page-deployment.yaml
+        - git add .
+        - git config credential.helper 'cache --timeout=120'
+        - git config user.email "misoboy.kor@gmail.com"
+        - git config user.name "misoboy"
+        - git commit -m "Update via TravisCI"
+        - git push -q https://$GITHUB_PACKAGE_PASSWORD@github.com/misoboy/k8s-ingress-custom-error-page.git argocd
+
+notifications:
+  email:
+    - misoboy.report@gmail.com
