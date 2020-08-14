@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: app-custom-error-page
-        image: docker.pkg.github.com/misoboy/k8s-ingress-custom-error-page/ingress-custom-error-page:2.0.6
+        image: docker.pkg.github.com/misoboy/k8s-ingress-custom-error-page/ingress-custom-error-page:2.0.7
         ports:
         - protocol: TCP
           containerPort: 8080
